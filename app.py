@@ -8,6 +8,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 from fpdf import FPDF
+import requests
+
 
 app = Flask(__name__)
 
@@ -73,10 +75,15 @@ def generate_pdf(data):
             try:
                 img_path = "temp_image.jpg"
                 response = requests.get(row["Imagem"], stream=True)
-                pdf.image(img_path, x=10, y=None, w=100)
-                os.remove(img_path)
-            except:
-                pdf.cell(200, 10, txt="Imagem não encontrada", ln=True, align="L")
+                if response.status_code == 200:
+                    with open(img_path, "wb") as img_file:
+                        img_file.write(response.content)
+                    pdf.image(img_path, x=10, y=None, w=100)
+                    os.remove(img_path)
+                else:
+                    pdf.cell(200, 10, txt="Imagem não encontrada (Erro no download)", ln=True, align="L")
+            except Exception as e:
+                pdf.cell(200, 10, txt=f"Erro ao baixar imagem: {str(e)}", ln=True, align="L")
 
         pdf.cell(0, 10, ln=True)  # Espaçamento
 
