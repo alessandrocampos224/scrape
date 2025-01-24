@@ -1,21 +1,24 @@
-from flask import Flask, render_template, request, send_file
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import pandas as pd
-import os
-import io
-
-app = Flask(__name__)
+import chromedriver_autoinstaller
 
 def scrape_urls(urls):
+    # Instala o chromedriver automaticamente
+    chromedriver_autoinstaller.install()
+
     # Configuração do Selenium
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
+    options.add_argument('--headless')  # Modo headless
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    driver = webdriver.Chrome(options=options)
+    options.add_argument('--disable-gpu')
+
+    # Serviço do Chrome
+    service = Service()  # O Selenium encontrará o chromedriver automaticamente
+    driver = webdriver.Chrome(service=service, options=options)
 
     product_data = []
     for url in urls:
@@ -44,28 +47,3 @@ def scrape_urls(urls):
 
     driver.quit()
     return product_data
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/generate', methods=['POST'])
-def generate_csv():
-    urls = request.form.get("urls").splitlines()  # Recebe as URLs do formulário
-    if not urls:
-        return "Por favor, insira ao menos uma URL", 400
-
-    # Faz o scraping
-    data = scrape_urls(urls)
-
-    # Gera o CSV na memória
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    df.to_csv(output, index=False, encoding='utf-8')
-    output.seek(0)
-
-    # Retorna o CSV para download
-    return send_file(output, as_attachment=True, download_name="produtos.csv", mimetype='text/csv')
-
-if __name__ == '__main__':
-    app.run(debug=True)
