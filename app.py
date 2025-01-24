@@ -72,35 +72,35 @@ def generate_pdf(data):
         pdf.cell(200, 10, txt=f"URL: {row['URL']}", ln=True, align="L")
 
         # Adiciona a imagem
-if row["Imagem"] != "Erro ao processar":
-    try:
-        img_path = "temp_image.jpg"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(row["Imagem"], headers=headers, stream=True)
+        if row["Imagem"] != "Erro ao processar":
+            try:
+                img_path = "temp_image.jpg"
+                headers = {"User-Agent": "Mozilla/5.0"}
+                response = requests.get(row["Imagem"], headers=headers, stream=True)
 
-        # Verifica se o download foi bem-sucedido e se o conteúdo é uma imagem
-        if response.status_code == 200 and "image" in response.headers["Content-Type"]:
-            with open(img_path, "wb") as img_file:
-                img_file.write(response.content)
+                # Verifica se o download foi bem-sucedido e se o conteúdo é uma imagem
+                if response.status_code == 200 and "image" in response.headers["Content-Type"]:
+                    with open(img_path, "wb") as img_file:
+                        img_file.write(response.content)
 
-            # Adiciona a imagem ao PDF
-            pdf.image(img_path, x=10, y=None, w=100)
+                    # Adiciona a imagem ao PDF
+                    pdf.image(img_path, x=10, y=None, w=100)
 
-            # Remove a imagem temporária
-            os.remove(img_path)
+                    # Remove a imagem temporária
+                    os.remove(img_path)
+                else:
+                    pdf.cell(200, 10, txt="Imagem inválida ou não foi possível baixá-la.", ln=True, align="L")
+            except Exception as e:
+                pdf.cell(200, 10, txt=f"Erro ao processar imagem: {str(e)}", ln=True, align="L")
         else:
-            pdf.cell(200, 10, txt="Imagem inválida ou não foi possível baixá-la.", ln=True, align="L")
-    except Exception as e:
-        pdf.cell(200, 10, txt=f"Erro ao processar imagem: {str(e)}", ln=True, align="L")
-else:
-    pdf.cell(200, 10, txt="Imagem não encontrada.", ln=True, align="L")
-
+            pdf.cell(200, 10, txt="Imagem não encontrada.", ln=True, align="L")
 
         pdf.cell(0, 10, ln=True)  # Espaçamento
 
     pdf_file = "produtos_hinode.pdf"
     pdf.output(pdf_file)
     return pdf_file
+
 
 # Função para gerar XML
 def generate_xml(data):
