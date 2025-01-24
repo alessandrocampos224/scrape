@@ -8,7 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 from fpdf import FPDF
-import requests
 
 app = Flask(__name__)
 
@@ -28,6 +27,8 @@ def scrape_urls(urls):
         try:
             driver.get(url)
             WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            
+            # Captura os dados do produto
             title = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-productNameContainer").text.strip()
             price = driver.find_element(By.CLASS_NAME, "vtex-product-price-1-x-sellingPrice").text.strip()
             description = driver.find_element(By.CLASS_NAME, "spec_text").text.strip()
@@ -45,24 +46,12 @@ def scrape_urls(urls):
                 "Título": "Erro ao processar",
                 "Preço": "Erro ao processar",
                 "Descrição": str(e),
-                "Imagem": None,
+                "Imagem": "Erro ao processar",
                 "URL": url
             })
 
     driver.quit()
     return product_data
-
-# Função para baixar imagens
-def download_image(image_url, file_name="temp_image.jpg"):
-    try:
-        response = requests.get(image_url, stream=True)
-        if response.status_code == 200:
-            with open(file_name, 'wb') as file:
-                file.write(response.content)
-            return file_name
-    except Exception as e:
-        print(f"Erro ao baixar imagem: {e}")
-    return None
 
 # Função para gerar PDF
 def generate_pdf(data):
@@ -80,12 +69,13 @@ def generate_pdf(data):
         pdf.cell(200, 10, txt=f"URL: {row['URL']}", ln=True, align="L")
         
         # Adiciona a imagem
-        if row["Imagem"]:
-            img_path = download_image(row["Imagem"])
-            if img_path:
+        if row["Imagem"] != "Erro ao processar":
+            try:
+                img_path = "temp_image.jpg"
+                os.system(f"wget -O {img_path} {row['Imagem']}")
                 pdf.image(img_path, x=10, y=None, w=100)
                 os.remove(img_path)
-            else:
+            except:
                 pdf.cell(200, 10, txt="Imagem não encontrada", ln=True, align="L")
 
         pdf.cell(0, 10, ln=True)  # Espaçamento
@@ -99,7 +89,7 @@ def generate_pdf(data):
 def index():
     return render_template('index.html')
 
-# Rota para gerar CSV, TXT ou PDF
+# Rota para gerar arquivos
 @app.route('/generate', methods=['POST'])
 def generate_files():
     urls = request.form.get('urls').splitlines()
