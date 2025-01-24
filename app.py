@@ -26,15 +26,16 @@ def scrape_urls(urls):
         try:
             driver.get(url)
             WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            
+            # Captura os dados do produto
             title = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-productNameContainer").text.strip()
             price = driver.find_element(By.CLASS_NAME, "vtex-product-price-1-x-sellingPrice").text.strip()
             description = driver.find_element(By.CLASS_NAME, "spec_text").text.strip()
-            image_element = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-imageElement")
-            image_url = image_element.get_attribute("src")
-            product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image_url, "URL": url})
-             
+            image = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-productImageTag").get_attribute("src").strip()
+
+            product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image, "URL": url})
         except Exception as e:
-            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e),"Imagem": "Erro ao processar", "URL": url})
+            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e), "Imagem": "Erro ao processar", "URL": url})
 
     driver.quit()
     return product_data
@@ -50,16 +51,18 @@ def generate_files():
     urls = request.form.get('urls').splitlines()
     data = scrape_urls(urls)
 
-    # Cria CSV
+    # Cria arquivos temporários
     csv_file = "produtos_hinode_formatado.csv"
+    txt_file = "produtos_hinode_formatado.txt"
+
+    # Gera o CSV
     with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Título", "Preço", "Descrição", "URL", "Imagem"])
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
-    # Cria TXT
-    txt_file = "produtos_hinode_formatado.txt"
+    # Gera o TXT
     with open(txt_file, mode='w', encoding='utf-8') as file:
         for row in data:
             file.write(f"Título: {row['Título']}\n")
@@ -72,11 +75,17 @@ def generate_files():
     # Envia os arquivos para download
     file_type = request.form.get('file_type')
     if file_type == "csv":
-        return send_file(csv_file, as_attachment=True)
+        response = send_file(csv_file, as_attachment=True)
     elif file_type == "txt":
-        return send_file(txt_file, as_attachment=True)
+        response = send_file(txt_file, as_attachment=True)
     else:
         return "Formato inválido selecionado", 400
+
+    # Remove os arquivos após envio
+    os.remove(csv_file)
+    os.remove(txt_file)
+
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
