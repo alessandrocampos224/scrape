@@ -4,6 +4,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
+from flask import Flask, render_template, request, send_file
+
+app = Flask(__app__) 
 
 def scrape_urls(urls):
     # Instala o chromedriver automaticamente
