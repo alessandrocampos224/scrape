@@ -1,5 +1,6 @@
 import csv
 import os
+import xml.etree.ElementTree as ET
 from flask import Flask, render_template, request, send_file
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -9,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 from fpdf import FPDF
 import requests
-
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -72,27 +73,23 @@ def generate_pdf(data):
 
         # Adiciona a imagem
         if row["Imagem"] != "Erro ao processar":
-    try:
-        img_path = "temp_image.jpg"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(row["Imagem"], headers=headers, stream=True)
+            try:
+                img_path = "temp_image.jpg"
+                headers = {"User-Agent": "Mozilla/5.0"}
+                response = requests.get(row["Imagem"], headers=headers, stream=True)
 
-        # Verifica se o download foi bem-sucedido
-        if response.status_code == 200 and "image" in response.headers["Content-Type"]:
-            with open(img_path, "wb") as img_file:
-                img_file.write(response.content)
+                if response.status_code == 200 and "image" in response.headers["Content-Type"]:
+                    with open(img_path, "wb") as img_file:
+                        img_file.write(response.content)
 
-            # Adiciona a imagem ao PDF
-            pdf.image(img_path, x=10, y=None, w=100)
-
-            # Remove a imagem temporária
-            os.remove(img_path)
+                    pdf.image(img_path, x=10, y=None, w=100)
+                    os.remove(img_path)
+                else:
+                    pdf.cell(200, 10, txt="Imagem inválida ou não foi possível baixá-la.", ln=True, align="L")
+            except Exception as e:
+                pdf.cell(200, 10, txt=f"Erro ao processar imagem: {str(e)}", ln=True, align="L")
         else:
-            pdf.cell(200, 10, txt="Imagem inválida ou não foi possível baixá-la.", ln=True, align="L")
-    except Exception as e:
-        pdf.cell(200, 10, txt=f"Erro ao processar imagem: {str(e)}", ln=True, align="L")
-else:
-    pdf.cell(200, 10, txt="Imagem não encontrada.", ln=True, align="L")
+            pdf.cell(200, 10, txt="Imagem não encontrada.", ln=True, align="L")
 
         pdf.cell(0, 10, ln=True)  # Espaçamento
 
@@ -100,6 +97,19 @@ else:
     pdf.output(pdf_file)
     return pdf_file
 
+# Função para gerar XML
+def generate_xml(data):
+    root = ET.Element("Produtos")
+    for row in data:
+        product = ET.SubElement(root, "Produto")
+        for key, value in row.items():
+            element = ET.SubElement(product, key)
+            element.text = value
+
+    tree = ET.ElementTree(root)
+    xml_file = "produtos_hinode.xml"
+    tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+    return xml_file
 
 # Rota principal
 @app.route('/')
@@ -134,6 +144,22 @@ def generate_files():
     # Cria PDF
     pdf_file = generate_pdf(data)
 
+    # Cria TSV
+    tsv_file = "produtos_hinode_formatado.tsv"
+    with open(tsv_file, mode='w', encoding='utf-8', newline='') as file:
+        writer = csv.writer(file, delimiter='\t')
+        writer.writerow(["Título", "Preço", "Descrição", "URL", "Imagem"])
+        for row in data:
+            writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
+
+    # Cria XLSX
+    xlsx_file = "produtos_hinode_formatado.xlsx"
+    df = pd.DataFrame(data)
+    df.to_excel(xlsx_file, index=False)
+
+    # Cria XML
+    xml_file = generate_xml(data)
+
     # Envia o arquivo selecionado
     file_type = request.form.get('file_type')
     if file_type == "csv":
@@ -142,6 +168,12 @@ def generate_files():
         return send_file(txt_file, as_attachment=True)
     elif file_type == "pdf":
         return send_file(pdf_file, as_attachment=True)
+    elif file_type == "tsv":
+        return send_file(tsv_file, as_attachment=True)
+    elif file_type == "xlsx":
+        return send_file(xlsx_file, as_attachment=True)
+    elif file_type == "xml":
+        return send_file(xml_file, as_attachment=True)
     else:
         return "Formato inválido selecionado", 400
 
