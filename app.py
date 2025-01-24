@@ -34,7 +34,7 @@ def scrape_urls(urls):
             product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image_url, "URL": url})
              
         except Exception as e:
-            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e),"Imagem": "Erro ao processar" "URL": url})
+            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e),"Imagem": "Erro ao processar", "URL": url})
 
     driver.quit()
     return product_data
