@@ -37,4 +37,5 @@ wsproto==1.2.0
 chromedriver-autoinstaller
 gunicorn
 fpdf==1.7.2
+openpyxl
 
