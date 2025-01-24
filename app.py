@@ -45,24 +45,22 @@ def scrape_urls(urls):
 def index():
     return render_template('index.html')
 
-# Rota para gerar CSV e TXT
+# Rota para gerar arquivos
 @app.route('/generate', methods=['POST'])
 def generate_files():
     urls = request.form.get('urls').splitlines()
     data = scrape_urls(urls)
 
-    # Cria arquivos temporários
+    # Cria CSV
     csv_file = "produtos_hinode_formatado.csv"
-    txt_file = "produtos_hinode_formatado.txt"
-
-    # Gera o CSV
     with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Título", "Preço", "Descrição", "URL", "Imagem"])
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
-    # Gera o TXT
+    # Cria TXT
+    txt_file = "produtos_hinode_formatado.txt"
     with open(txt_file, mode='w', encoding='utf-8') as file:
         for row in data:
             file.write(f"Título: {row['Título']}\n")
@@ -72,20 +70,31 @@ def generate_files():
             file.write(f"Imagem: {row['Imagem']}\n")
             file.write("-" * 50 + "\n")
 
+    # Cria HTML com imagens
+    html_file = "produtos_hinode_formatado.html"
+    with open(html_file, mode='w', encoding='utf-8') as file:
+        file.write("<html><body><h1>Produtos Hinode</h1><table border='1'>")
+        file.write("<tr><th>Título</th><th>Preço</th><th>Descrição</th><th>URL</th><th>Imagem</th></tr>")
+        for row in data:
+            file.write("<tr>")
+            file.write(f"<td>{row['Título']}</td>")
+            file.write(f"<td>{row['Preço']}</td>")
+            file.write(f"<td>{row['Descrição']}</td>")
+            file.write(f"<td><a href='{row['URL']}'>{row['URL']}</a></td>")
+            file.write(f"<td><img src='{row['Imagem']}' alt='Imagem do Produto' width='150'></td>")
+            file.write("</tr>")
+        file.write("</table></body></html>")
+
     # Envia os arquivos para download
     file_type = request.form.get('file_type')
     if file_type == "csv":
-        response = send_file(csv_file, as_attachment=True)
+        return send_file(csv_file, as_attachment=True)
     elif file_type == "txt":
-        response = send_file(txt_file, as_attachment=True)
+        return send_file(txt_file, as_attachment=True)
+    elif file_type == "html":
+        return send_file(html_file, as_attachment=True)
     else:
         return "Formato inválido selecionado", 400
-
-    # Remove os arquivos após envio
-    os.remove(csv_file)
-    os.remove(txt_file)
-
-    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
