@@ -31,7 +31,7 @@ def scrape_urls(urls):
             description = driver.find_element(By.CLASS_NAME, "spec_text").text.strip()
             image_element = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-imageElement")
             image_url = image_element.get_attribute("src")
-            product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image_url "URL": url})
+            product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image_url, "URL": url})
              
         except Exception as e:
             product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e),"Imagem": "Erro ao processar" "URL": url})
