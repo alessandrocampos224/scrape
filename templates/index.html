@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de CSV</title>
+</head>
+<body>
+    <h1>Gerador de CSV de Produtos</h1>
+    <form action="/generate" method="post">
+        <label for="urls">Insira as URLs (uma por linha):</label><br><br>
+        <textarea id="urls" name="urls" rows="10" cols="50" placeholder="https://example.com/produto1\nhttps://example.com/produto2"></textarea><br><br>
+        <button type="submit">Gerar CSV</button>
+    </form>
+</body>
+</html>
