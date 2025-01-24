@@ -3,14 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de CSV</title>
+    <title>Scraping Hinode</title>
 </head>
 <body>
-    <h1>Gerador de CSV de Produtos</h1>
-    <form action="/generate" method="post">
-        <label for="urls">Insira as URLs (uma por linha):</label><br><br>
-        <textarea id="urls" name="urls" rows="10" cols="50" placeholder="https://example.com/produto1\nhttps://example.com/produto2"></textarea><br><br>
-        <button type="submit">Gerar CSV</button>
+    <h1>Scraping Hinode</h1>
+    <form action="/generate" method="POST">
+        <label for="urls">Insira as URLs (uma por linha):</label><br>
+        <textarea id="urls" name="urls" rows="10" cols="50"></textarea><br><br>
+        <label for="file_type">Selecione o formato do arquivo:</label><br>
+        <input type="radio" id="csv" name="file_type" value="csv" checked>
+        <label for="csv">CSV</label><br>
+        <input type="radio" id="txt" name="file_type" value="txt">
+        <label for="txt">TXT</label><br><br>
+        <button type="submit">Gerar Arquivo</button>
     </form>
 </body>
 </html>
