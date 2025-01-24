@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 from fpdf import FPDF
+import requests
 
 app = Flask(__name__)
 
@@ -44,12 +45,24 @@ def scrape_urls(urls):
                 "Título": "Erro ao processar",
                 "Preço": "Erro ao processar",
                 "Descrição": str(e),
-                "Imagem": "Erro ao processar",
+                "Imagem": None,
                 "URL": url
             })
 
     driver.quit()
     return product_data
+
+# Função para baixar imagens
+def download_image(image_url, file_name="temp_image.jpg"):
+    try:
+        response = requests.get(image_url, stream=True)
+        if response.status_code == 200:
+            with open(file_name, 'wb') as file:
+                file.write(response.content)
+            return file_name
+    except Exception as e:
+        print(f"Erro ao baixar imagem: {e}")
+    return None
 
 # Função para gerar PDF
 def generate_pdf(data):
@@ -67,13 +80,12 @@ def generate_pdf(data):
         pdf.cell(200, 10, txt=f"URL: {row['URL']}", ln=True, align="L")
         
         # Adiciona a imagem
-        if row["Imagem"] != "Erro ao processar":
-            try:
-                img_path = "temp_image.jpg"
-                os.system(f"wget -O {img_path} {row['Imagem']}")
+        if row["Imagem"]:
+            img_path = download_image(row["Imagem"])
+            if img_path:
                 pdf.image(img_path, x=10, y=None, w=100)
                 os.remove(img_path)
-            except:
+            else:
                 pdf.cell(200, 10, txt="Imagem não encontrada", ln=True, align="L")
 
         pdf.cell(0, 10, ln=True)  # Espaçamento
