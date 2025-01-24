@@ -72,7 +72,7 @@ def generate_pdf(data):
         if row["Imagem"] != "Erro ao processar":
             try:
                 img_path = "temp_image.jpg"
-                os.system(f"wget -O {img_path} {row['Imagem']}")
+                response = requests.get(row["Imagem"], stream=True)
                 pdf.image(img_path, x=10, y=None, w=100)
                 os.remove(img_path)
             except:
