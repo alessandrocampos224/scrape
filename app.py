@@ -29,9 +29,12 @@ def scrape_urls(urls):
             title = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-productNameContainer").text.strip()
             price = driver.find_element(By.CLASS_NAME, "vtex-product-price-1-x-sellingPrice").text.strip()
             description = driver.find_element(By.CLASS_NAME, "spec_text").text.strip()
-            product_data.append({"Título": title, "Preço": price, "Descrição": description, "URL": url})
+            image_element = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-imageElement")
+            image_url = image_element.get_attribute("src")
+            product_data.append({"Título": title, "Preço": price, "Descrição": description, "Imagem": image_url "URL": url})
+             
         except Exception as e:
-            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e), "URL": url})
+            product_data.append({"Título": "Erro ao processar", "Preço": "Erro ao processar", "Descrição": str(e),"Imagem": "Erro ao processar" "URL": url})
 
     driver.quit()
     return product_data
@@ -51,9 +54,9 @@ def generate_files():
     csv_file = "produtos_hinode_formatado.csv"
     with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["Título", "Preço", "Descrição", "URL"])
+        writer.writerow(["Título", "Preço", "Descrição", "URL", "Imagem"])
         for row in data:
-            writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"]])
+            writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
     # Cria TXT
     txt_file = "produtos_hinode_formatado.txt"
@@ -63,6 +66,7 @@ def generate_files():
             file.write(f"Preço: {row['Preço']}\n")
             file.write(f"Descrição: {row['Descrição']}\n")
             file.write(f"URL: {row['URL']}\n")
+            file.write(f"Imagem: {row['Imagem']}\n")
             file.write("-" * 50 + "\n")
 
     # Envia os arquivos para download
