@@ -57,6 +57,7 @@ def scrape_urls(urls):
 
     driver.quit()
     return product_data
+    
 
 # Função para gerar PDF
 def generate_pdf(data):
@@ -166,6 +167,17 @@ def generate_files():
     xlsx_file = "produtos_hinode_formatado.xlsx"
     df = pd.DataFrame(data)
     df.to_excel(xlsx_file, index=False)
+    def clean_text_for_excel(text):
+    if not isinstance(text, str):
+        return text
+    # Remove caracteres problemáticos
+    return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+
+# Modifique a parte do código que gera o Excel
+xlsx_file = "produtos_hinode_formatado.xlsx"
+cleaned_data = [{k: clean_text_for_excel(v) for k, v in item.items()} for item in data]
+df = pd.DataFrame(cleaned_data)
+df.to_excel(xlsx_file, index=False)
 
     # Cria XML
     xml_file = generate_xml(data)
