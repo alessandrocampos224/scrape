@@ -11,6 +11,8 @@ import chromedriver_autoinstaller
 from fpdf import FPDF
 import requests
 import pandas as pd
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
@@ -73,7 +75,6 @@ def generate_pdf(data):
 
         if row["Imagem"] != "Erro ao processar":
             try:
-                img_path = f"temp_image_{hash(row['URL'])}.jpg"  # Nome único para cada imagem
                 headers = {
                     "User-Agent": "Mozilla/5.0",
                     "Accept": "image/jpeg,image/png,image/*"
@@ -81,8 +82,11 @@ def generate_pdf(data):
                 response = requests.get(row["Imagem"], headers=headers, timeout=10)
 
                 if response.status_code == 200 and response.content:
-                    with open(img_path, "wb") as img_file:
-                        img_file.write(response.content)
+                    # Converter imagem para JPEG usando Pillow
+                    img = Image.open(io.BytesIO(response.content))
+                    img = img.convert('RGB')
+                    img_path = f"temp_image_{hash(row['URL'])}.jpg"
+                    img.save(img_path, 'JPEG')
                     
                     try:
                         pdf.image(img_path, x=10, y=None, w=100)
