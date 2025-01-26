@@ -19,7 +19,42 @@ app = Flask(__name__)
 def clean_text_for_excel(text):
     if not isinstance(text, str):
         return text
-    return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    # Remove caracteres especiais e substitui por equivalentes seguros
+    replacements = {
+        '>': '-',
+        'à': 'a',
+        'á': 'a',
+        'â': 'a',
+        'ã': 'a',
+        'ä': 'a',
+        'è': 'e',
+        'é': 'e',
+        'ê': 'e',
+        'ë': 'e',
+        'ì': 'i',
+        'í': 'i',
+        'î': 'i',
+        'ï': 'i',
+        'ò': 'o',
+        'ó': 'o',
+        'ô': 'o',
+        'õ': 'o',
+        'ö': 'o',
+        'ù': 'u',
+        'ú': 'u',
+        'û': 'u',
+        'ü': 'u',
+        'ý': 'y',
+        'ÿ': 'y',
+        'ñ': 'n',
+        'ç': 'c',
+        '-': ' ',
+        '_': ' '
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    return ' '.join(text.split())  # Remove espaços extras
 
 def scrape_urls(urls):
     chromedriver_autoinstaller.install()
