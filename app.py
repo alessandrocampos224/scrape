@@ -16,7 +16,11 @@ import io
 
 app = Flask(__name__)
 
-# Função para realizar o scraping
+def clean_text_for_excel(text):
+    if not isinstance(text, str):
+        return text
+    return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+
 def scrape_urls(urls):
     chromedriver_autoinstaller.install()
     options = webdriver.ChromeOptions()
@@ -33,7 +37,6 @@ def scrape_urls(urls):
             driver.get(url)
             WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             
-            # Captura os dados do produto
             title = driver.find_element(By.CLASS_NAME, "vtex-store-components-3-x-productNameContainer").text.strip()
             price = driver.find_element(By.CLASS_NAME, "vtex-product-price-1-x-sellingPrice").text.strip()
             description = driver.find_element(By.CLASS_NAME, "spec_text").text.strip()
@@ -57,9 +60,7 @@ def scrape_urls(urls):
 
     driver.quit()
     return product_data
-    
 
-# Função para gerar PDF
 def generate_pdf(data):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=10)
@@ -83,19 +84,18 @@ def generate_pdf(data):
                 response = requests.get(row["Imagem"], headers=headers, timeout=10)
 
                 if response.status_code == 200 and response.content:
-                    # Converter imagem para JPEG usando Pillow
-                    img = Image.open(io.BytesIO(response.content))
-                    img = img.convert('RGB')
-                    img_path = f"temp_image_{hash(row['URL'])}.jpg"
-                    img.save(img_path, 'JPEG')
-                    
                     try:
+                        img = Image.open(io.BytesIO(response.content))
+                        img = img.convert('RGB')
+                        img_path = f"temp_image_{hash(row['URL'])}.jpg"
+                        img.save(img_path, 'JPEG')
+                        
                         pdf.image(img_path, x=10, y=None, w=100)
-                    except Exception as e:
-                        pdf.cell(200, 10, txt=f"Erro ao inserir imagem no PDF: {str(e)}", ln=True, align="L")
-                    finally:
+                        
                         if os.path.exists(img_path):
                             os.remove(img_path)
+                    except Exception as e:
+                        pdf.cell(200, 10, txt=f"Erro ao processar imagem: {str(e)}", ln=True, align="L")
                 else:
                     pdf.cell(200, 10, txt="Falha ao baixar imagem", ln=True, align="L")
             except Exception as e:
@@ -107,8 +107,6 @@ def generate_pdf(data):
     pdf.output(pdf_file)
     return pdf_file
 
-
-# Função para gerar XML
 def generate_xml(data):
     root = ET.Element("Produtos")
     for row in data:
@@ -122,18 +120,15 @@ def generate_xml(data):
     tree.write(xml_file, encoding="utf-8", xml_declaration=True)
     return xml_file
 
-# Rota principal
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Rota para gerar arquivos
 @app.route('/generate', methods=['POST'])
 def generate_files():
     urls = request.form.get('urls').splitlines()
     data = scrape_urls(urls)
 
-    # Cria CSV
     csv_file = "produtos_hinode_formatado.csv"
     with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
@@ -141,7 +136,6 @@ def generate_files():
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
-    # Cria TXT
     txt_file = "produtos_hinode_formatado.txt"
     with open(txt_file, mode='w', encoding='utf-8') as file:
         for row in data:
@@ -152,10 +146,8 @@ def generate_files():
             file.write(f"Imagem: {row['Imagem']}\n")
             file.write("-" * 50 + "\n")
 
-    # Cria PDF
     pdf_file = generate_pdf(data)
 
-    # Cria TSV
     tsv_file = "produtos_hinode_formatado.tsv"
     with open(tsv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter='\t')
@@ -163,26 +155,13 @@ def generate_files():
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
-    # Cria XLSX
     xlsx_file = "produtos_hinode_formatado.xlsx"
-    df = pd.DataFrame(data)
+    cleaned_data = [{k: clean_text_for_excel(v) for k, v in item.items()} for item in data]
+    df = pd.DataFrame(cleaned_data)
     df.to_excel(xlsx_file, index=False)
-    def clean_text_for_excel(text):
-    if not isinstance(text, str):
-        return text
-    # Remove caracteres problemáticos
-    return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
 
-# Modifique a parte do código que gera o Excel
-xlsx_file = "produtos_hinode_formatado.xlsx"
-cleaned_data = [{k: clean_text_for_excel(v) for k, v in item.items()} for item in data]
-df = pd.DataFrame(cleaned_data)
-df.to_excel(xlsx_file, index=False)
-
-    # Cria XML
     xml_file = generate_xml(data)
 
-    # Envia o arquivo selecionado
     file_type = request.form.get('file_type')
     if file_type == "csv":
         return send_file(csv_file, as_attachment=True)
