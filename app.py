@@ -10,51 +10,11 @@ from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 from fpdf import FPDF
 import requests
-import pandas as pd
+import xlwt
 from PIL import Image
 import io
 
 app = Flask(__name__)
-
-def clean_text_for_excel(text):
-    if not isinstance(text, str):
-        return text
-    # Remove caracteres especiais e substitui por equivalentes seguros
-    replacements = {
-        '>': '-',
-        'à': 'a',
-        'á': 'a',
-        'â': 'a',
-        'ã': 'a',
-        'ä': 'a',
-        'è': 'e',
-        'é': 'e',
-        'ê': 'e',
-        'ë': 'e',
-        'ì': 'i',
-        'í': 'i',
-        'î': 'i',
-        'ï': 'i',
-        'ò': 'o',
-        'ó': 'o',
-        'ô': 'o',
-        'õ': 'o',
-        'ö': 'o',
-        'ù': 'u',
-        'ú': 'u',
-        'û': 'u',
-        'ü': 'u',
-        'ý': 'y',
-        'ÿ': 'y',
-        'ñ': 'n',
-        'ç': 'c',
-        '-': ' ',
-        '_': ' '
-    }
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-    text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-    return ' '.join(text.split())  # Remove espaços extras
 
 def scrape_urls(urls):
     chromedriver_autoinstaller.install()
@@ -148,7 +108,7 @@ def generate_xml(data):
         product = ET.SubElement(root, "Produto")
         for key, value in row.items():
             element = ET.SubElement(product, key)
-            element.text = value
+            element.text = str(value)
 
     tree = ET.ElementTree(root)
     xml_file = "produtos_hinode.xml"
@@ -164,6 +124,7 @@ def generate_files():
     urls = request.form.get('urls').splitlines()
     data = scrape_urls(urls)
 
+    # Gera CSV
     csv_file = "produtos_hinode_formatado.csv"
     with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
@@ -171,6 +132,7 @@ def generate_files():
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
+    # Gera TXT
     txt_file = "produtos_hinode_formatado.txt"
     with open(txt_file, mode='w', encoding='utf-8') as file:
         for row in data:
@@ -181,8 +143,10 @@ def generate_files():
             file.write(f"Imagem: {row['Imagem']}\n")
             file.write("-" * 50 + "\n")
 
+    # Gera PDF
     pdf_file = generate_pdf(data)
 
+    # Gera TSV
     tsv_file = "produtos_hinode_formatado.tsv"
     with open(tsv_file, mode='w', encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter='\t')
@@ -190,13 +154,41 @@ def generate_files():
         for row in data:
             writer.writerow([row["Título"], row["Preço"], row["Descrição"], row["URL"], row["Imagem"]])
 
-    xlsx_file = "produtos_hinode_formatado.xlsx"
-    cleaned_data = [{k: clean_text_for_excel(v) for k, v in item.items()} for item in data]
-    df = pd.DataFrame(cleaned_data)
-    df.to_excel(xlsx_file, index=False)
+    # Gera Excel
+    temp_csv = "temp_produtos.csv"
+    with open(temp_csv, mode='w', encoding='utf-8', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Título", "Preço", "Descrição", "URL", "Imagem"])
+        for row in data:
+            writer.writerow([
+                str(row["Título"])[:32000],
+                str(row["Preço"])[:32000],
+                str(row["Descrição"])[:32000],
+                str(row["URL"])[:32000],
+                str(row["Imagem"])[:32000]
+            ])
 
+    # Converte CSV para Excel
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet('Produtos')
+
+    with open(temp_csv, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        for r, row in enumerate(reader):
+            for c, val in enumerate(row):
+                ws.write(r, c, val)
+
+    xlsx_file = "produtos_hinode_formatado.xls"
+    wb.save(xlsx_file)
+
+    # Remove o arquivo temporário CSV
+    if os.path.exists(temp_csv):
+        os.remove(temp_csv)
+
+    # Gera XML
     xml_file = generate_xml(data)
 
+    # Retorna o arquivo solicitado
     file_type = request.form.get('file_type')
     if file_type == "csv":
         return send_file(csv_file, as_attachment=True)
@@ -206,7 +198,7 @@ def generate_files():
         return send_file(pdf_file, as_attachment=True)
     elif file_type == "tsv":
         return send_file(tsv_file, as_attachment=True)
-    elif file_type == "xlsx":
+    elif file_type == "xlsx" or file_type == "xls":
         return send_file(xlsx_file, as_attachment=True)
     elif file_type == "xml":
         return send_file(xml_file, as_attachment=True)
